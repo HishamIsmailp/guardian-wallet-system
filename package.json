@@ -1,0 +1,28 @@
+{
+    "name": "guardian-wallet-system",
+    "version": "1.0.0",
+    "description": "Guardian Wallet System - Digital wallet for college environments",
+    "scripts": {
+        "install:all": "npm install && cd backend && npm install && cd ../admin-panel && npm install && cd ../mobile-app && npm install",
+        "start": "concurrently -n backend,admin -c blue,green \"npm run dev --prefix backend\" \"npm run dev --prefix admin-panel\"",
+        "start:backend": "npm run dev --prefix backend",
+        "start:admin": "npm run dev --prefix admin-panel",
+        "start:mobile": "cd mobile-app && npx expo start",
+        "start:mobile:tunnel": "cd mobile-app && npx expo start --tunnel",
+        "start:mobile:android": "cd mobile-app && npx expo start --android",
+        "start:mobile:ios": "cd mobile-app && npx expo start --ios",
+        "db:seed": "cd backend && node seed_mock.js",
+        "db:reset": "cd backend && npx prisma migrate reset --force && node seed_mock.js",
+        "db:studio": "cd backend && npx prisma studio"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    },
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "keywords": ["wallet", "fintech", "react-native", "express", "college"],
+    "author": "",
+    "license": "MIT"
+}

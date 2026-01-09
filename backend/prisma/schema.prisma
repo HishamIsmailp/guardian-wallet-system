@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // ADMIN, GUARDIAN, STUDENT, VENDOR
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id])
+  phone        String?
+  isVerified   Boolean  @default(false)
+  
+  wallets          Wallet[]
+  sentTransactions Transaction[] @relation("Sender")
+  receivedTransactions Transaction[] @relation("Receiver")
+  walletRules      WalletRule[] 
+  
+  guardianId       String?
+  guardian         User?    @relation("GuardianStudent", fields: [guardianId], references: [id])
+  students         User[]   @relation("GuardianStudent")
+
+  moneyRequests    MoneyRequest[]
+  auditLogs        AuditLog[]
+  tasks            TaskChecklist[]
+  vendorProfile    Vendor?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  storeName   String
+  description String?
+  approved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("vendors")
+}
+
+model Wallet {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String   // GUARDIAN, STUDENT, VENDOR
+  balance     Decimal  @default(0.0)
+  currency    String   @default("INR")
+
+  sentTransactions     Transaction[] @relation("WalletSender")
+  receivedTransactions Transaction[] @relation("WalletReceiver")
+  rules                WalletRule[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("wallets")
+}
+
+model WalletRule {
+  id              String   @id @default(uuid())
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id])
+  dailyLimit      Decimal?
+  allowedVendors  String   // JSON string or comma separated for SQLite
+  active          Boolean  @default(true)
+  createdByUserId String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("wallet_rules")
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  fromWalletId String?
+  toWalletId   String?
+  fromWallet   Wallet?  @relation("WalletSender", fields: [fromWalletId], references: [id])
+  toWallet     Wallet?  @relation("WalletReceiver", fields: [toWalletId], references: [id])
+  
+  amount       Decimal
+  type         String   // DEPOSIT, TRANSFER, PAYMENT, WITHDRAWAL
+  status       String   // PENDING, COMPLETED, FAILED, REJECTED
+  description  String?
+  
+  initiatedByUserId String
+  user              User   @relation("Sender", fields: [initiatedByUserId], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+model MoneyRequest {
+  id        String   @id @default(uuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  amount    Decimal
+  reason    String?
+  status    String   // PENDING, APPROVED, REJECTED
+  
+  reviewedByUserId String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("money_requests")
+}
+
+model TaskChecklist {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  role        String   
+  status      String   // PENDING, COMPLETED
+  
+  userId      String?  
+  user        User?    @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  
+  @@map("task_checklists")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  details   String? 
+  timestamp DateTime @default(now())
+
+  @@map("audit_logs")
+}

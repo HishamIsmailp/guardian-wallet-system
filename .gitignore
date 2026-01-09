@@ -1,0 +1,175 @@
+# ======================
+# Dependencies
+# ======================
+node_modules/
+.pnp/
+.pnp.js
+.yarn/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ======================
+# Environment files
+# ======================
+.env
+.env.*
+!.env.example
+*.env
+
+# ======================
+# Build outputs
+# ======================
+dist/
+build/
+.next/
+out/
+admin-panel/dist/
+
+# ======================
+# Database files
+# ======================
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backend/prisma/dev.db*
+backend/database.json
+
+# ======================
+# IDE and editors
+# ======================
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+*.code-workspace
+
+# ======================
+# OS files
+# ======================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+
+# ======================
+# Logs
+# ======================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# ======================
+# Testing
+# ======================
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# ======================
+# Cache
+# ======================
+.cache/
+.parcel-cache/
+.eslintcache
+*.tsbuildinfo
+.npm/
+
+# ======================
+# Documentation
+# ======================
+docs/
+*.md
+!README.md
+
+# ======================
+# Expo / React Native
+# ======================
+.expo/
+mobile-app/.expo/
+mobile-app/.expo-shared/
+mobile-app/dist/
+mobile-app/web-build/
+
+# Native build folders (auto-generated)
+android/
+ios/
+mobile-app/android/
+mobile-app/ios/
+
+# Certificates and keys
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.cer
+*.certSigningRequest
+
+# Debug files
+*.orig.*
+*.hprof
+
+# Metro bundler
+.metro-health-check*
+
+# ======================
+# Kotlin/Gradle
+# ======================
+.kotlin/
+.gradle/
+*.class
+*.jar
+
+# ======================
+# Temporary files
+# ======================
+*.tmp
+*.temp
+.tmp/
+.temp/
+*.bak
+*.backup
+
+# ======================
+# AI / Tools
+# ======================
+.claude/
+.cursor/
+.copilot/
+
+# ======================
+# Miscellaneous
+# ======================
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
