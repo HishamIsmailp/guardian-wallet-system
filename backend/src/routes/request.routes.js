@@ -7,7 +7,7 @@ router.use(authenticateToken);
 
 router.post('/create', requestController.createRequest);
 router.get('/list', requestController.listRequests);
-router.post('/approve/:requestId', requestController.approveRequest);
-router.post('/reject/:requestId', requestController.rejectRequest);
+router.post('/:requestId/approve', requestController.approveRequest);
+router.post('/:requestId/reject', requestController.rejectRequest);
 
 module.exports = router;

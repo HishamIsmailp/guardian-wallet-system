@@ -6,6 +6,7 @@ const { registerValidation, loginValidation, uuidParamValidation } = require('..
 
 router.post('/register', authLimiter, registerValidation, authController.register);
 router.post('/login', authLimiter, loginValidation, authController.login);
+router.post('/refresh', authController.refreshToken);
 
 // Admin Routes
 const { authenticateToken, requireRole } = require('../middlewares/auth.middleware');

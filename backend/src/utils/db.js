@@ -66,7 +66,7 @@ class Model {
     findUnique({ where, include }) {
         const item = this.items.find(i => matchWhere(i, where));
         if (item && include) {
-            return this.enrich(item, include);
+            return Promise.resolve(this.enrich(item, include));
         }
         return Promise.resolve(item || null);
     }
@@ -74,7 +74,7 @@ class Model {
     findFirst({ where, include }) {
         const item = this.items.find(i => matchWhere(i, where));
         if (item && include) {
-            return this.enrich(item, include);
+            return Promise.resolve(this.enrich(item, include));
         }
         return Promise.resolve(item || null);
     }
@@ -120,7 +120,7 @@ class Model {
         this.items.push(newItem);
         saveDb();
 
-        if (include) return this.enrich(newItem, include);
+        if (include) return Promise.resolve(this.enrich(newItem, include));
         return Promise.resolve(newItem);
     }
 
@@ -169,7 +169,7 @@ class Model {
         if (include.student && res.studentId) {
             res.student = dbData['users'].find(u => u.id === res.studentId);
         }
-        return Promise.resolve(res);
+        return res; // Return directly, not wrapped in Promise
     }
 }
 

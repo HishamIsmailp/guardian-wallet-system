@@ -89,6 +89,42 @@ exports.login = async (req, res) => {
     }
 };
 
+exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Refresh token required' });
+        }
+
+        // Verify refresh token
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+        // Get user with fresh data
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            include: { role: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Generate new access token
+        const { generateAccessToken } = require('../config/jwt');
+        const newAccessToken = generateAccessToken(user);
+
+        res.json({ accessToken: newAccessToken });
+    } catch (error) {
+        console.error(error);
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(403).json({ error: 'Invalid or expired refresh token' });
+        }
+        res.status(500).json({ error: 'Token refresh failed' });
+    }
+};
+
 
 exports.getUsers = async (req, res) => {
     try {

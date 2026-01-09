@@ -2,8 +2,20 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Your machine's local IP address (for physical devices)
-const LOCAL_IP = '192.168.1.164';
+// ============================================
+// API CONFIGURATION
+// ============================================
+// Update LOCAL_IP with your computer's IP address
+// To find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)
+// Look for "IPv4 Address" under your active network adapter
+// 
+// Common scenarios:
+// - Physical device on same WiFi: Use your computer's local IP (e.g., 192.168.1.9)
+// - Android Emulator: Use '10.0.2.2' (special alias for host machine)
+// - iOS Simulator: Use 'localhost' or '127.0.0.1'
+// ============================================
+
+const LOCAL_IP = '192.168.1.9'; // <-- UPDATE THIS if your IP changes
 
 // Determine the correct API URL based on platform
 const getBaseUrl = () => {
@@ -11,11 +23,11 @@ const getBaseUrl = () => {
         // Web browser uses localhost
         return 'http://localhost:3000/api';
     } else if (Platform.OS === 'android') {
-        // Use local IP for physical devices (works for both emulator and physical)
-        // Note: 10.0.2.2 only works for Android emulator, not physical devices
+        // For physical Android devices, use LOCAL_IP
+        // For Android Emulator, change LOCAL_IP to '10.0.2.2'
         return `http://${LOCAL_IP}:3000/api`;
     } else {
-        // iOS simulator uses localhost, physical iOS needs local IP
+        // iOS simulator can use localhost, physical iOS needs LOCAL_IP
         return `http://${LOCAL_IP}:3000/api`;
     }
 };
