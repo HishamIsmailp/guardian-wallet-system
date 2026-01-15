@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
-    const [isStudentMode, setIsStudentMode] = useState(false);
+    const [mode, setMode] = useState('login'); // 'login', 'student', 'register'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [studentId, setStudentId] = useState('');
     const [pin, setPin] = useState('');
+
+    // Registration fields
+    const [name, setName] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [registerRole, setRegisterRole] = useState('GUARDIAN'); // 'GUARDIAN' or 'VENDOR'
+    const [storeName, setStoreName] = useState('');
+
     const { login, setUser } = useAuth();
 
     const handleLogin = async () => {
@@ -59,32 +66,98 @@ export default function LoginScreen() {
         }
     };
 
+    const handleRegister = async () => {
+        if (!name || !email || !password || !confirmPassword) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            Alert.alert('Error', 'Passwords do not match');
+            return;
+        }
+
+        if (password.length < 6) {
+            Alert.alert('Error', 'Password must be at least 6 characters');
+            return;
+        }
+
+        if (registerRole === 'VENDOR' && !storeName) {
+            Alert.alert('Error', 'Please enter your store/business name');
+            return;
+        }
+
+        try {
+            const payload = {
+                name,
+                email,
+                password,
+                roleName: registerRole,
+            };
+
+            if (registerRole === 'VENDOR') {
+                payload.storeName = storeName;
+            }
+
+            const res = await api.post('/auth/register', payload);
+
+            Alert.alert(
+                'Registration Successful',
+                registerRole === 'VENDOR'
+                    ? 'Your vendor account is pending approval. You can login once an admin approves your account.'
+                    : 'Account created successfully! You can now login.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            setMode('login');
+                            setName('');
+                            setPassword('');
+                            setConfirmPassword('');
+                            setStoreName('');
+                        }
+                    }
+                ]
+            );
+        } catch (error) {
+            Alert.alert('Registration Failed', error.response?.data?.error || 'Failed to create account');
+        }
+    };
+
     return (
-        <View style={styles.container}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
             <Text style={styles.title}>Guardian<Text style={styles.highlight}>Wallet</Text></Text>
 
-            {/* Login mode toggle */}
+            {/* Mode toggle */}
             <View style={styles.modeToggle}>
                 <TouchableOpacity
-                    style={[styles.modeOption, !isStudentMode && styles.modeOptionActive]}
-                    onPress={() => setIsStudentMode(false)}
+                    style={[styles.modeOption, mode === 'login' && styles.modeOptionActive]}
+                    onPress={() => setMode('login')}
                 >
-                    <Text style={[styles.modeOptionText, !isStudentMode && styles.modeOptionTextActive]}>
-                        Guardian / Vendor
+                    <Text style={[styles.modeOptionText, mode === 'login' && styles.modeOptionTextActive]}>
+                        Login
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.modeOption, isStudentMode && styles.modeOptionActive]}
-                    onPress={() => setIsStudentMode(true)}
+                    style={[styles.modeOption, mode === 'student' && styles.modeOptionActive]}
+                    onPress={() => setMode('student')}
                 >
-                    <Text style={[styles.modeOptionText, isStudentMode && styles.modeOptionTextActive]}>
+                    <Text style={[styles.modeOptionText, mode === 'student' && styles.modeOptionTextActive]}>
                         Student
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.modeOption, mode === 'register' && styles.modeOptionActive]}
+                    onPress={() => setMode('register')}
+                >
+                    <Text style={[styles.modeOptionText, mode === 'register' && styles.modeOptionTextActive]}>
+                        Register
                     </Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.form}>
-                {isStudentMode ? (
+                {mode === 'student' ? (
                     // Student login form
                     <>
                         <Text style={styles.label}>Student ID</Text>
@@ -116,6 +189,93 @@ export default function LoginScreen() {
                         <Text style={styles.hint}>
                             Login to set up biometric payments.{'\n'}
                             Use fingerprint instead of PIN at vendors.
+                        </Text>
+                    </>
+                ) : mode === 'register' ? (
+                    // Registration form
+                    <>
+                        {/* Role selection */}
+                        <Text style={styles.label}>I am a</Text>
+                        <View style={styles.roleToggle}>
+                            <TouchableOpacity
+                                style={[styles.roleOption, registerRole === 'GUARDIAN' && styles.roleOptionActive]}
+                                onPress={() => setRegisterRole('GUARDIAN')}
+                            >
+                                <Text style={[styles.roleOptionText, registerRole === 'GUARDIAN' && styles.roleOptionTextActive]}>
+                                    Guardian / Parent
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.roleOption, registerRole === 'VENDOR' && styles.roleOptionActive]}
+                                onPress={() => setRegisterRole('VENDOR')}
+                            >
+                                <Text style={[styles.roleOptionText, registerRole === 'VENDOR' && styles.roleOptionTextActive]}>
+                                    Vendor
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.label}>Full Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="John Doe"
+                            placeholderTextColor="#666"
+                            value={name}
+                            onChangeText={setName}
+                        />
+
+                        {registerRole === 'VENDOR' && (
+                            <>
+                                <Text style={styles.label}>Store / Business Name</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="My Cafeteria"
+                                    placeholderTextColor="#666"
+                                    value={storeName}
+                                    onChangeText={setStoreName}
+                                />
+                            </>
+                        )}
+
+                        <Text style={styles.label}>Email Address</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="user@email.com"
+                            placeholderTextColor="#666"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+
+                        <Text style={styles.label}>Password</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Min 6 characters"
+                            placeholderTextColor="#666"
+                            secureTextEntry
+                            value={password}
+                            onChangeText={setPassword}
+                        />
+
+                        <Text style={styles.label}>Confirm Password</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Re-enter password"
+                            placeholderTextColor="#666"
+                            secureTextEntry
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                        />
+
+                        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                            <Text style={styles.buttonText}>Create Account</Text>
+                        </TouchableOpacity>
+
+                        <Text style={styles.hint}>
+                            {registerRole === 'VENDOR'
+                                ? 'Vendor accounts require admin approval before you can login.'
+                                : 'Guardian accounts can manage student wallets and spending.'}
                         </Text>
                     </>
                 ) : (
@@ -154,7 +314,7 @@ export default function LoginScreen() {
                     </>
                 )}
             </View>
-        </View>
+        </ScrollView>
     );
 }
 
@@ -162,6 +322,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#0B0F1A',
+    },
+    contentContainer: {
+        flexGrow: 1,
         justifyContent: 'center',
         padding: 20,
     },
@@ -198,6 +361,30 @@ const styles = StyleSheet.create({
     },
     modeOptionTextActive: {
         color: '#000',
+    },
+    roleToggle: {
+        flexDirection: 'row',
+        marginBottom: 20,
+        backgroundColor: '#1a2235',
+        borderRadius: 10,
+        padding: 4,
+    },
+    roleOption: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    roleOptionActive: {
+        backgroundColor: '#3b82f6',
+    },
+    roleOptionText: {
+        color: '#888',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    roleOptionTextActive: {
+        color: '#fff',
     },
     form: {
         alignSelf: 'stretch',

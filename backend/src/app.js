@@ -13,6 +13,7 @@ const vendorRoutes = require('./routes/vendor.routes');
 const adminRoutes = require('./routes/admin.routes');
 const checklistRoutes = require('./routes/checklist.routes');
 const menuRoutes = require('./routes/menu.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
 
@@ -33,6 +34,7 @@ app.use('/api/vendor', vendorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/menu', menuRoutes);  // Vendor menu management
+app.use('/api/payment', paymentRoutes);  // Razorpay payment integration
 
 app.get('/', (req, res) => {
     res.json({ message: 'Guardian Wallet API is running' });

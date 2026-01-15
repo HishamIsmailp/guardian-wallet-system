@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 import QRCode from 'react-native-qrcode-svg';
+import RazorpayCheckout from '../components/RazorpayCheckout';
 
 export default function ParentDashboard() {
     const { user, logout } = useAuth();
@@ -32,6 +33,13 @@ export default function ParentDashboard() {
 
     // QR Code modal (NEW)
     const [showQRModal, setShowQRModal] = useState(false);
+
+    // Razorpay payment state
+    const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
+    const [addMoneyAmount, setAddMoneyAmount] = useState('');
+    const [showRazorpay, setShowRazorpay] = useState(false);
+    const [razorpayOrder, setRazorpayOrder] = useState(null);
+    const [processingPayment, setProcessingPayment] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -84,14 +92,87 @@ export default function ParentDashboard() {
         fetchData();
     }, []);
 
-    const handleAddMoney = async () => {
+    // Open add money modal
+    const handleAddMoney = () => {
+        setAddMoneyAmount('');
+        setShowAddMoneyModal(true);
+    };
+
+    // Create Razorpay order and open checkout
+    const initiatePayment = async () => {
+        const amount = parseFloat(addMoneyAmount);
+        if (!amount || amount < 1) {
+            Alert.alert('Error', 'Please enter a valid amount (minimum ₹1)');
+            return;
+        }
+
+        setProcessingPayment(true);
         try {
-            await api.post('/wallet/add-money', { amount: 500 });
-            Alert.alert('Success', 'Added ₹500 to wallet');
+            // Create order on backend
+            const response = await api.post('/payment/create-order', { amount });
+            const orderData = {
+                orderId: response.data.orderId,
+                amount: response.data.amount,
+                keyId: response.data.keyId,
+                userName: user?.name,
+                userEmail: user?.email,
+                userPhone: user?.phone || ''
+            };
+
+            setRazorpayOrder(orderData);
+            setShowAddMoneyModal(false);
+            setShowRazorpay(true);
+        } catch (error) {
+            console.error('Create order error:', error);
+            Alert.alert('Error', error.response?.data?.error || 'Failed to initiate payment');
+        } finally {
+            setProcessingPayment(false);
+        }
+    };
+
+    // Handle successful payment
+    const handlePaymentSuccess = async (paymentData) => {
+        setShowRazorpay(false);
+        setProcessingPayment(true);
+
+        try {
+            // Verify payment on backend
+            const response = await api.post('/payment/verify', {
+                razorpay_order_id: paymentData.razorpay_order_id,
+                razorpay_payment_id: paymentData.razorpay_payment_id,
+                razorpay_signature: paymentData.razorpay_signature
+            });
+
+            Alert.alert(
+                'Payment Successful!',
+                `₹${response.data.amount} added to your wallet.\n\nNew Balance: ₹${response.data.newBalance.toFixed(2)}`,
+                [{ text: 'OK' }]
+            );
             fetchData();
         } catch (error) {
-            Alert.alert('Error', error.response?.data?.error || 'Failed to add money');
+            console.error('Payment verification error:', error);
+            Alert.alert('Error', 'Payment verification failed. Please contact support.');
+        } finally {
+            setProcessingPayment(false);
+            setRazorpayOrder(null);
         }
+    };
+
+    // Handle payment failure
+    const handlePaymentFailure = (error) => {
+        setShowRazorpay(false);
+        setRazorpayOrder(null);
+        Alert.alert(
+            'Payment Failed',
+            error?.description || 'Payment could not be completed. Please try again.',
+            [{ text: 'OK' }]
+        );
+    };
+
+    // Close Razorpay modal
+    const handleRazorpayClose = () => {
+        setShowRazorpay(false);
+        setRazorpayOrder(null);
     };
 
     const handleCreateStudent = async () => {
@@ -324,7 +405,7 @@ export default function ParentDashboard() {
                 <Text style={styles.balanceLabel}>My Wallet Balance</Text>
                 <Text style={styles.balanceValue}>₹{(balance || 0).toFixed(2)}</Text>
                 <TouchableOpacity style={styles.addMoneyBtn} onPress={handleAddMoney}>
-                    <Text style={styles.addMoneyText}>+ Add Money (₹500)</Text>
+                    <Text style={styles.addMoneyText}>+ Add Money</Text>
                 </TouchableOpacity>
             </View>
 
@@ -544,6 +625,67 @@ export default function ParentDashboard() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Add Money Modal */}
+            <Modal visible={showAddMoneyModal} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Add Money to Wallet</Text>
+                        <Text style={styles.modalSubtitle}>Enter amount to add via Razorpay</Text>
+
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Amount (₹)"
+                            placeholderTextColor="#666"
+                            value={addMoneyAmount}
+                            onChangeText={setAddMoneyAmount}
+                            keyboardType="decimal-pad"
+                        />
+
+                        {/* Quick amount buttons */}
+                        <View style={styles.quickAmounts}>
+                            {[100, 500, 1000, 2000].map(amt => (
+                                <TouchableOpacity
+                                    key={amt}
+                                    style={styles.quickAmountBtn}
+                                    onPress={() => setAddMoneyAmount(String(amt))}
+                                >
+                                    <Text style={styles.quickAmountText}>₹{amt}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={styles.modalCancelBtn}
+                                onPress={() => setShowAddMoneyModal(false)}
+                            >
+                                <Text style={styles.modalCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalConfirmBtn, processingPayment && styles.btnDisabled]}
+                                onPress={initiatePayment}
+                                disabled={processingPayment}
+                            >
+                                {processingPayment ? (
+                                    <ActivityIndicator color="#000" size="small" />
+                                ) : (
+                                    <Text style={styles.modalConfirmText}>Proceed to Pay</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Razorpay Checkout */}
+            <RazorpayCheckout
+                visible={showRazorpay}
+                onClose={handleRazorpayClose}
+                orderData={razorpayOrder}
+                onSuccess={handlePaymentSuccess}
+                onFailure={handlePaymentFailure}
+            />
         </View>
     );
 }
@@ -651,5 +793,11 @@ const styles = StyleSheet.create({
     qrIdText: { color: '#888', fontSize: 14, marginBottom: 10 },
     qrHint: { color: '#666', fontSize: 12, textAlign: 'center', lineHeight: 18, marginBottom: 20 },
     qrCloseBtn: { backgroundColor: '#333', paddingHorizontal: 40, paddingVertical: 12, borderRadius: 8 },
-    qrCloseBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 }
+    qrCloseBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+
+    // Add Money styles
+    quickAmounts: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
+    quickAmountBtn: { flex: 1, backgroundColor: '#0B0F1A', padding: 12, borderRadius: 8, marginHorizontal: 4, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+    quickAmountText: { color: '#2EF2C5', fontWeight: 'bold' },
+    btnDisabled: { opacity: 0.6 }
 });

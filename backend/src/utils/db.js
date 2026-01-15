@@ -13,6 +13,7 @@ const initialData = {
     transactions: [],
     wallet_rules: [],
     vendors: [],
+    menu_items: [],
     task_checklists: [],
     audit_logs: []
     // money_requests removed - students don't interact with system
@@ -47,6 +48,9 @@ function matchWhere(item, where) {
             } else if (val.gte) { // Date or number
                 if (new Date(item[key]) < new Date(val.gte)) return false;
                 // Note: date comparison slightly loose
+            } else if (val.contains) {
+                // String contains check
+                if (!item[key] || !item[key].toString().includes(val.contains)) return false;
             }
         } else {
             if (item[key] !== val) return false;
@@ -189,6 +193,8 @@ const prisma = {
     transaction: new Model('transactions'),
     walletRule: new Model('wallet_rules'),
     vendor: new Model('vendors'),
+    menuItem: new Model('menu_items'),
+    auditLog: new Model('audit_logs'),
 
     $transaction: async (items) => {
         if (Array.isArray(items)) return Promise.all(items);

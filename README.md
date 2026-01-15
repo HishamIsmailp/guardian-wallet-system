@@ -23,6 +23,7 @@ guardian-wallet-system/
 
 ## Features
 
+- **Razorpay Integration:** Guardians can add money to wallet using UPI, cards, net banking
 - **Guardian Controls:** Parents manage student wallets, set spending limits, view transaction history
 - **Biometric Payments:** Students can use fingerprint/Face ID to generate secure OTP codes
 - **QR Code Scanning:** Vendors can scan student QR codes for quick identification
@@ -188,9 +189,16 @@ npm run start:mobile
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/wallet/balance` | Get wallet balance |
-| POST | `/wallet/add-money` | Add money (Guardian) |
 | GET | `/wallet/transactions` | Transaction history |
 | POST | `/wallet/rules` | Set spending rules |
+
+### Payment (Razorpay)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/payment/key` | Get Razorpay public key |
+| POST | `/payment/create-order` | Create Razorpay order |
+| POST | `/payment/verify` | Verify payment and update wallet |
+| GET | `/payment/history` | Get payment history |
 
 ### Admin
 | Method | Endpoint | Description |
@@ -264,7 +272,18 @@ DATABASE_URL="file:./dev.db"
 # JWT Secrets (change in production!)
 JWT_SECRET="your-secret-key-change-in-production"
 JWT_REFRESH_SECRET="your-refresh-secret-change-in-production"
+
+# Razorpay (Get keys from https://dashboard.razorpay.com/app/keys)
+RAZORPAY_KEY_ID="rzp_test_xxxxxxxxxxxx"
+RAZORPAY_KEY_SECRET="xxxxxxxxxxxxxxxxxxxx"
 ```
+
+### Razorpay Setup
+1. Create account at [Razorpay Dashboard](https://dashboard.razorpay.com)
+2. Go to Settings → API Keys
+3. Generate Test API keys
+4. Add keys to `.env` file
+5. For production, use Live API keys
 
 ## Database Commands
 

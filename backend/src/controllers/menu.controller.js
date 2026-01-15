@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/db');
 
 // Helper to get or create vendor profile
 const getOrCreateVendorProfile = async (userId, role) => {
