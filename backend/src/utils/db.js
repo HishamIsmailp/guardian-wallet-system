@@ -8,13 +8,14 @@ const dbPath = path.resolve(__dirname, '../../database.json');
 const initialData = {
     users: [],
     roles: [],
+    students: [],      // NEW: Students are separate from users (no login)
     wallets: [],
     transactions: [],
     wallet_rules: [],
-    money_requests: [],
     vendors: [],
     task_checklists: [],
     audit_logs: []
+    // money_requests removed - students don't interact with system
 };
 
 // Load or Init
@@ -167,7 +168,14 @@ class Model {
             res.role = dbData['roles'].find(r => r.id === res.roleId);
         }
         if (include.student && res.studentId) {
-            res.student = dbData['users'].find(u => u.id === res.studentId);
+            res.student = dbData['students'].find(s => s.id === res.studentId);
+        }
+        if (include.guardian && res.guardianId) {
+            res.guardian = dbData['users'].find(u => u.id === res.guardianId);
+        }
+        if (include.wallet && res.id) {
+            // For student, find wallet by studentId
+            res.wallet = dbData['wallets'].find(w => w.studentId === res.id);
         }
         return res; // Return directly, not wrapped in Promise
     }
@@ -176,10 +184,10 @@ class Model {
 const prisma = {
     user: new Model('users'),
     role: new Model('roles'),
+    student: new Model('students'),  // NEW: Student model
     wallet: new Model('wallets'),
     transaction: new Model('transactions'),
     walletRule: new Model('wallet_rules'),
-    moneyRequest: new Model('money_requests'),
     vendor: new Model('vendors'),
 
     $transaction: async (items) => {

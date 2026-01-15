@@ -8,7 +8,9 @@ const Users = () => {
     const fetchUsers = async () => {
         try {
             const { data } = await api.get('/auth/users');
-            setUsers(data);
+            // Filter out any legacy STUDENT users - students are now separate
+            const filteredUsers = data.filter(u => u.role?.name !== 'STUDENT');
+            setUsers(filteredUsers);
         } catch (error) {
             console.error('Failed to fetch users', error);
         } finally {

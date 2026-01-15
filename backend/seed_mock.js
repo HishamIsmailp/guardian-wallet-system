@@ -2,9 +2,10 @@ const prisma = require('./src/utils/db');
 const bcrypt = require('bcrypt');
 
 async function main() {
-    console.log('Seeding data...');
+    console.log('Seeding data for new flow (Students as separate entities)...');
 
-    const roles = ['ADMIN', 'GUARDIAN', 'STUDENT', 'VENDOR'];
+    // Only create ADMIN, GUARDIAN, VENDOR roles (STUDENT removed - not a user)
+    const roles = ['ADMIN', 'GUARDIAN', 'VENDOR'];
 
     for (const r of roles) {
         const existing = await prisma.role.findUnique({ where: { name: r } });
@@ -25,7 +26,6 @@ async function main() {
     if (!existingAdmin) {
         const passwordHash = await bcrypt.hash('admin123', 10);
         try {
-            // create method in mock handles UUID if ID missing
             await prisma.user.create({
                 data: {
                     email: 'admin@college.edu',
@@ -35,23 +35,21 @@ async function main() {
                     isVerified: true
                 }
             });
-            console.log('Created Admin User: admin@college.edu');
+            console.log('Created Admin User: admin@college.edu (password: admin123)');
         } catch (e) {
             console.error('Failed to create admin:', e);
         }
     }
 
-    // Create test users with wallets
     const guardianRole = await prisma.role.findUnique({ where: { name: 'GUARDIAN' } });
-    const studentRole = await prisma.role.findUnique({ where: { name: 'STUDENT' } });
     const vendorRole = await prisma.role.findUnique({ where: { name: 'VENDOR' } });
-
     const passwordHash = await bcrypt.hash('password', 10);
 
     // Create Guardian
     const existingGuardian = await prisma.user.findUnique({ where: { email: 'guardian@test.com' } });
+    let guardian;
     if (!existingGuardian) {
-        const guardian = await prisma.user.create({
+        guardian = await prisma.user.create({
             data: {
                 email: 'guardian@test.com',
                 passwordHash,
@@ -68,36 +66,64 @@ async function main() {
             }
         });
         console.log('Created Guardian: guardian@test.com (password: password)');
+    } else {
+        guardian = existingGuardian;
     }
 
-    // Create Student
-    const existingStudent = await prisma.user.findUnique({ where: { email: 'student@test.com' } });
+    // Create Student (NEW: As separate entity, not a user)
+    const existingStudent = await prisma.student.findUnique({ where: { studentId: 'STU001' } });
+    let student;
     if (!existingStudent) {
-        const guardian = await prisma.user.findFirst({ where: { email: 'guardian@test.com' } });
-        const student = await prisma.user.create({
+        const pinHash = await bcrypt.hash('1234', 10); // PIN: 1234
+        student = await prisma.student.create({
             data: {
-                email: 'student@test.com',
-                passwordHash,
                 name: 'Test Student',
-                roleId: studentRole.id,
+                studentId: 'STU001',
+                pinHash,
                 guardianId: guardian.id,
-                isVerified: true
+                status: 'ACTIVE'
             }
         });
         await prisma.wallet.create({
             data: {
-                userId: student.id,
+                studentId: student.id,
                 type: 'STUDENT',
                 balance: 500
             }
         });
-        console.log('Created Student: student@test.com (password: password)');
+        console.log('Created Student: STU001 (PIN: 1234) - Linked to guardian@test.com');
+    } else {
+        student = existingStudent;
+    }
+
+    // Create another student for testing
+    const existingStudent2 = await prisma.student.findUnique({ where: { studentId: 'STU002' } });
+    if (!existingStudent2) {
+        const pinHash = await bcrypt.hash('5678', 10); // PIN: 5678
+        const student2 = await prisma.student.create({
+            data: {
+                name: 'Jane Doe',
+                studentId: 'STU002',
+                pinHash,
+                guardianId: guardian.id,
+                status: 'ACTIVE'
+            }
+        });
+        await prisma.wallet.create({
+            data: {
+                studentId: student2.id,
+                type: 'STUDENT',
+                balance: 300
+            }
+        });
+        console.log('Created Student: STU002 (PIN: 5678) - Linked to guardian@test.com');
     }
 
     // Create Vendor
     const existingVendor = await prisma.user.findUnique({ where: { email: 'vendor@test.com' } });
+    let vendor;
     if (!existingVendor) {
-        const vendor = await prisma.user.create({
+        vendor = await prisma.user.create({
             data: {
                 email: 'vendor@test.com',
                 passwordHash,
@@ -120,7 +146,38 @@ async function main() {
                 approved: true
             }
         });
-        console.log('Created Vendor: vendor@test.com (password: password)');
+        console.log('Created Vendor: vendor@test.com (password: password) - Store: Campus Store');
+    } else {
+        vendor = existingVendor;
+    }
+
+    // Create another vendor
+    const existingVendor2 = await prisma.user.findUnique({ where: { email: 'cafeteria@test.com' } });
+    if (!existingVendor2) {
+        const vendor2 = await prisma.user.create({
+            data: {
+                email: 'cafeteria@test.com',
+                passwordHash,
+                name: 'Cafeteria Owner',
+                roleId: vendorRole.id,
+                isVerified: true
+            }
+        });
+        await prisma.wallet.create({
+            data: {
+                userId: vendor2.id,
+                type: 'VENDOR',
+                balance: 0
+            }
+        });
+        await prisma.vendor.create({
+            data: {
+                userId: vendor2.id,
+                storeName: 'Campus Cafeteria',
+                approved: true
+            }
+        });
+        console.log('Created Vendor: cafeteria@test.com (password: password) - Store: Campus Cafeteria');
     }
 
     // Create Task Checklists
@@ -128,7 +185,12 @@ async function main() {
     const path = require('path');
     const crypto = require('crypto');
     const dbPath = path.resolve(__dirname, 'database.json');
-    const dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+    let dbData;
+    try {
+        dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+    } catch (e) {
+        dbData = { task_checklists: [], audit_logs: [] };
+    }
 
     if (!dbData.task_checklists || dbData.task_checklists.length === 0) {
         const checklists = [
@@ -154,8 +216,8 @@ async function main() {
             },
             {
                 id: crypto.randomUUID(),
-                title: 'Link Student Account',
-                description: 'Connect your student to your guardian account',
+                title: 'Create Student Account',
+                description: 'Add your student with their college ID and set a PIN',
                 role: 'GUARDIAN',
                 userId: null,
                 status: 'PENDING',
@@ -174,26 +236,6 @@ async function main() {
             },
             {
                 id: crypto.randomUUID(),
-                title: 'Verify Student ID',
-                description: 'Upload and verify your student ID card',
-                role: 'STUDENT',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            },
-            {
-                id: crypto.randomUUID(),
-                title: 'Explore Campus Vendors',
-                description: 'Browse approved vendors on campus',
-                role: 'STUDENT',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            },
-            {
-                id: crypto.randomUUID(),
                 title: 'Submit Business License',
                 description: 'Upload your business license for verification',
                 role: 'VENDOR',
@@ -204,8 +246,8 @@ async function main() {
             },
             {
                 id: crypto.randomUUID(),
-                title: 'Generate QR Code',
-                description: 'Create your vendor QR code for payments',
+                title: 'Learn Transaction Process',
+                description: 'Understand how to process student payments using ID and PIN',
                 role: 'VENDOR',
                 userId: null,
                 status: 'PENDING',
@@ -228,35 +270,42 @@ async function main() {
         console.log('Created task checklists');
     }
 
-    // Add comprehensive test data
-    const guardian = await prisma.user.findFirst({ where: { email: 'guardian@test.com' } });
-    const student = await prisma.user.findFirst({ where: { email: 'student@test.com' } });
-    const vendor = await prisma.user.findFirst({ where: { email: 'vendor@test.com' } });
-    const admin = await prisma.user.findFirst({ where: { email: 'admin@college.edu' } });
+    // Ensure students array exists in dbData
+    if (!dbData.students) {
+        dbData.students = [];
+    }
 
-    if (guardian && student && vendor) {
-        const guardianWallet = await prisma.wallet.findFirst({ where: { userId: guardian.id } });
-        const studentWallet = await prisma.wallet.findFirst({ where: { userId: student.id } });
-        const vendorWallet = await prisma.wallet.findFirst({ where: { userId: vendor.id } });
+    // Get fresh references
+    const guardianFresh = await prisma.user.findFirst({ where: { email: 'guardian@test.com' } });
+    const vendorFresh = await prisma.user.findFirst({ where: { email: 'vendor@test.com' } });
+    const adminFresh = await prisma.user.findFirst({ where: { email: 'admin@college.edu' } });
+    const studentFresh = await prisma.student.findFirst({ where: { studentId: 'STU001' } });
+
+    if (guardianFresh && vendorFresh && studentFresh) {
+        const guardianWallet = await prisma.wallet.findFirst({ where: { userId: guardianFresh.id } });
+        const studentWallet = await prisma.wallet.findFirst({ where: { studentId: studentFresh.id } });
+        const vendorWallet = await prisma.wallet.findFirst({ where: { userId: vendorFresh.id } });
 
         // Add Wallet Rules for student
-        const existingRule = await prisma.walletRule.findFirst({ where: { walletId: studentWallet.id } });
-        if (!existingRule) {
-            await prisma.walletRule.create({
-                data: {
-                    walletId: studentWallet.id,
-                    dailyLimit: 200,
-                    allowedVendors: JSON.stringify([vendor.id]),
-                    active: true,
-                    createdByUserId: guardian.id
-                }
-            });
-            console.log('Created wallet rule for student');
+        if (studentWallet) {
+            const existingRule = await prisma.walletRule.findFirst({ where: { walletId: studentWallet.id } });
+            if (!existingRule) {
+                await prisma.walletRule.create({
+                    data: {
+                        walletId: studentWallet.id,
+                        dailyLimit: 200,
+                        allowedVendors: JSON.stringify([vendorFresh.id]),
+                        active: true,
+                        createdByUserId: guardianFresh.id
+                    }
+                });
+                console.log('Created wallet rule for student (Daily limit: ₹200)');
+            }
         }
 
         // Add sample transactions
         const existingTransactions = await prisma.transaction.findMany({});
-        if (existingTransactions.length === 0) {
+        if (existingTransactions.length === 0 && guardianWallet && studentWallet && vendorWallet) {
             // Guardian deposits money
             await prisma.transaction.create({
                 data: {
@@ -266,8 +315,8 @@ async function main() {
                     type: 'DEPOSIT',
                     status: 'COMPLETED',
                     description: 'Initial deposit',
-                    initiatedByUserId: guardian.id,
-                    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days ago
+                    initiatedByUserId: guardianFresh.id,
+                    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
                 }
             });
 
@@ -280,12 +329,12 @@ async function main() {
                     type: 'TRANSFER',
                     status: 'COMPLETED',
                     description: 'Weekly allowance',
-                    initiatedByUserId: guardian.id,
-                    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days ago
+                    initiatedByUserId: guardianFresh.id,
+                    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
                 }
             });
 
-            // Student pays vendor
+            // Vendor processes payment (new flow: vendor initiates)
             await prisma.transaction.create({
                 data: {
                     fromWalletId: studentWallet.id,
@@ -294,12 +343,12 @@ async function main() {
                     type: 'PAYMENT',
                     status: 'COMPLETED',
                     description: 'Lunch at Campus Store',
-                    initiatedByUserId: student.id,
-                    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days ago
+                    initiatedByUserId: vendorFresh.id,  // Vendor initiates!
+                    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
                 }
             });
 
-            // Another student payment
+            // Another payment
             await prisma.transaction.create({
                 data: {
                     fromWalletId: studentWallet.id,
@@ -308,127 +357,79 @@ async function main() {
                     type: 'PAYMENT',
                     status: 'COMPLETED',
                     description: 'Books and supplies',
-                    initiatedByUserId: student.id,
-                    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() // 1 day ago
-                }
-            });
-
-            // Pending transaction
-            await prisma.transaction.create({
-                data: {
-                    fromWalletId: studentWallet.id,
-                    toWalletId: vendorWallet.id,
-                    amount: 50,
-                    type: 'PAYMENT',
-                    status: 'PENDING',
-                    description: 'Snacks',
-                    initiatedByUserId: student.id
+                    initiatedByUserId: vendorFresh.id,
+                    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
                 }
             });
 
             console.log('Created sample transactions');
         }
 
-        // Add money requests
-        const existingRequests = await prisma.moneyRequest.findMany({});
-        if (existingRequests.length === 0) {
-            // Approved request
-            await prisma.moneyRequest.create({
-                data: {
-                    studentId: student.id,
-                    amount: 200,
-                    reason: 'Need money for textbooks',
-                    status: 'APPROVED',
-                    reviewedByUserId: guardian.id,
-                    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
-                }
-            });
-
-            // Pending request
-            await prisma.moneyRequest.create({
-                data: {
-                    studentId: student.id,
-                    amount: 100,
-                    reason: 'Extra money for weekend trip',
-                    status: 'PENDING',
-                    reviewedByUserId: null
-                }
-            });
-
-            // Rejected request
-            await prisma.moneyRequest.create({
-                data: {
-                    studentId: student.id,
-                    amount: 500,
-                    reason: 'Want to buy new gadget',
-                    status: 'REJECTED',
-                    reviewedByUserId: guardian.id,
-                    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-                }
-            });
-
-            console.log('Created money requests');
-        }
-
         // Add audit logs
-        if (!dbData.audit_logs || dbData.audit_logs.length === 0) {
+        if (adminFresh && (!dbData.audit_logs || dbData.audit_logs.length === 0)) {
             dbData.audit_logs = [
                 {
                     id: crypto.randomUUID(),
                     action: 'USER_LOGIN',
-                    userId: admin.id,
+                    userId: adminFresh.id,
                     details: 'Admin logged in',
                     timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
                 },
                 {
                     id: crypto.randomUUID(),
                     action: 'USER_VERIFIED',
-                    userId: admin.id,
-                    details: `Verified user: ${guardian.email}`,
+                    userId: adminFresh.id,
+                    details: `Verified user: ${guardianFresh.email}`,
                     timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
                 },
                 {
                     id: crypto.randomUUID(),
+                    action: 'STUDENT_CREATED',
+                    userId: guardianFresh.id,
+                    details: `Created student: ${studentFresh.name} (${studentFresh.studentId})`,
+                    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: crypto.randomUUID(),
                     action: 'WALLET_RULE_CREATED',
-                    userId: guardian.id,
+                    userId: guardianFresh.id,
                     details: `Created spending limit for student: ₹200/day`,
                     timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
                 },
                 {
                     id: crypto.randomUUID(),
                     action: 'MONEY_TRANSFER',
-                    userId: guardian.id,
-                    details: `Transferred ₹500 to ${student.name}`,
+                    userId: guardianFresh.id,
+                    details: `Transferred ₹500 to ${studentFresh.name}`,
                     timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
                 },
                 {
                     id: crypto.randomUUID(),
-                    action: 'PAYMENT_COMPLETED',
-                    userId: student.id,
-                    details: `Paid ₹150 to Campus Store`,
+                    action: 'VENDOR_PAYMENT',
+                    userId: vendorFresh.id,
+                    details: `Received ₹150 from ${studentFresh.name}`,
                     timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'MONEY_REQUEST_APPROVED',
-                    userId: guardian.id,
-                    details: `Approved money request for ₹200`,
-                    timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'MONEY_REQUEST_REJECTED',
-                    userId: guardian.id,
-                    details: `Rejected money request for ₹500`,
-                    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
                 }
             ];
             console.log('Created audit logs');
         }
 
         fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2));
-        console.log('✅ Database seeded successfully with comprehensive test data!');
     }
+
+    console.log('\n✅ Database seeded successfully!');
+    console.log('\n📋 Test Credentials:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Admin:    admin@college.edu / admin123');
+    console.log('Guardian: guardian@test.com / password');
+    console.log('Vendor:   vendor@test.com / password');
+    console.log('Vendor:   cafeteria@test.com / password');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('\n📋 Test Students (for vendor transactions):');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Student 1: ID = STU001, PIN = 1234');
+    console.log('Student 2: ID = STU002, PIN = 5678');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
 main();

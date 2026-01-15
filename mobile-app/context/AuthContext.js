@@ -18,7 +18,19 @@ export const AuthProvider = ({ children }) => {
             const token = await AsyncStorage.getItem('token');
 
             if (userJson && token) {
-                setUser(JSON.parse(userJson));
+                const parsedUser = JSON.parse(userJson);
+                // Check if user has a supported role (now includes STUDENT for biometric auth)
+                const supportedRoles = ['GUARDIAN', 'VENDOR', 'ADMIN', 'STUDENT'];
+                if (parsedUser.isStudent || (parsedUser.role?.name && supportedRoles.includes(parsedUser.role.name))) {
+                    setUser(parsedUser);
+                } else {
+                    // Clear invalid session
+                    console.log('Clearing invalid session - unsupported role:', parsedUser.role?.name);
+                    await AsyncStorage.removeItem('user');
+                    await AsyncStorage.removeItem('token');
+                    await AsyncStorage.removeItem('refreshToken');
+                    setUser(null);
+                }
             }
         } catch (e) {
             console.log('Failed to load user', e);
@@ -36,6 +48,15 @@ export const AuthProvider = ({ children }) => {
             console.log('Login response received:', response.status);
 
             const { user, accessToken, refreshToken } = response.data;
+
+            // Check if user role is supported in mobile app
+            const supportedRoles = ['GUARDIAN', 'VENDOR', 'ADMIN'];
+            if (user.role?.name && !supportedRoles.includes(user.role.name)) {
+                return {
+                    success: false,
+                    message: 'Students cannot login. Use your Student ID and PIN at vendor locations.'
+                };
+            }
 
             setUser(user);
             await AsyncStorage.setItem('user', JSON.stringify(user));
@@ -73,7 +94,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, setUser, loading, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

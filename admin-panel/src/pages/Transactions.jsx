@@ -5,6 +5,7 @@ const Transactions = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState({ type: '', status: '' });
+    const [processing, setProcessing] = useState(null);
 
     useEffect(() => {
         fetchTransactions();
@@ -21,6 +22,20 @@ const Transactions = () => {
             console.error('Failed to fetch transactions:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const approveSettlement = async (transactionId) => {
+        if (!window.confirm('Approve this settlement request?')) return;
+        setProcessing(transactionId);
+        try {
+            await api.post('/vendor/settlement', { transactionId });
+            alert('Settlement approved successfully');
+            fetchTransactions();
+        } catch (err) {
+            alert('Failed to approve: ' + (err.response?.data?.error || 'Unknown error'));
+        } finally {
+            setProcessing(null);
         }
     };
 
@@ -143,6 +158,7 @@ const Transactions = () => {
                                 <th className="py-4 px-6 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
                                 <th className="py-4 px-6 text-left text-xs font-semibold text-gray-400 uppercase">Description</th>
                                 <th className="py-4 px-6 text-left text-xs font-semibold text-gray-400 uppercase">Date</th>
+                                <th className="py-4 px-6 text-left text-xs font-semibold text-gray-400 uppercase">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -175,11 +191,24 @@ const Transactions = () => {
                                         <td className="py-4 px-6 text-sm text-gray-400">
                                             {new Date(transaction.createdAt).toLocaleString()}
                                         </td>
+                                        <td className="py-4 px-6">
+                                            {transaction.type === 'WITHDRAWAL' && transaction.status === 'PENDING' ? (
+                                                <button
+                                                    onClick={() => approveSettlement(transaction.id)}
+                                                    disabled={processing === transaction.id}
+                                                    className="px-3 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 disabled:opacity-50"
+                                                >
+                                                    {processing === transaction.id ? 'Processing...' : 'Approve'}
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-600">-</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="6" className="py-12 text-center text-gray-500">
+                                    <td colSpan="7" className="py-12 text-center text-gray-500">
                                         No transactions found
                                     </td>
                                 </tr>

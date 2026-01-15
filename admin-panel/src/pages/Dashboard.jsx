@@ -98,9 +98,16 @@ const Dashboard = () => {
                 <StatCard
                     title="Total Users"
                     value={stats?.totalUsers || 0}
-                    subtitle={`${stats?.totalGuardians || 0} Guardians, ${stats?.totalStudents || 0} Students`}
+                    subtitle={`${stats?.totalGuardians || 0} Guardians`}
                     color="blue"
                     icon="👥"
+                />
+                <StatCard
+                    title="Total Students"
+                    value={stats?.totalStudents || 0}
+                    subtitle={`${stats?.activeStudents || 0} active, ${stats?.blockedStudents || 0} blocked`}
+                    color="cyan"
+                    icon="🎓"
                 />
                 <StatCard
                     title="Total Transactions"
@@ -115,13 +122,6 @@ const Dashboard = () => {
                     subtitle="All time"
                     color="purple"
                     icon="💰"
-                />
-                <StatCard
-                    title="Pending Requests"
-                    value={stats?.pendingRequests || 0}
-                    subtitle={`${stats?.approvedRequests || 0} approved`}
-                    color="yellow"
-                    icon="⏳"
                 />
             </div>
 
@@ -177,32 +177,30 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Recent Money Requests */}
+            {/* Transaction Breakdown */}
             <div className="bg-[#151B2B] rounded-xl border border-gray-800 overflow-hidden">
                 <div className="p-6 border-b border-gray-800">
-                    <h2 className="text-xl font-bold text-white">Recent Money Requests</h2>
+                    <h2 className="text-xl font-bold text-white">Transaction Breakdown</h2>
                 </div>
                 <div className="p-6">
-                    {stats?.recentRequests?.length > 0 ? (
-                        <div className="space-y-3">
-                            {stats.recentRequests.map((request) => (
-                                <div key={request.id} className="flex items-center justify-between p-4 bg-[#0B0F1A] rounded-lg">
-                                    <div>
-                                        <p className="text-white font-semibold">₹{parseFloat(request.amount).toFixed(2)}</p>
-                                        <p className="text-sm text-gray-400">{request.reason || 'No reason provided'}</p>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${request.status === 'APPROVED' ? 'bg-green-500/20 text-green-400' :
-                                            request.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                'bg-red-500/20 text-red-400'
-                                        }`}>
-                                        {request.status}
-                                    </span>
-                                </div>
-                            ))}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-[#0B0F1A] rounded-lg p-4 text-center">
+                            <p className="text-green-400 text-2xl font-bold">{stats?.deposits || 0}</p>
+                            <p className="text-gray-400 text-sm">Deposits</p>
                         </div>
-                    ) : (
-                        <p className="text-center text-gray-500 py-8">No money requests yet</p>
-                    )}
+                        <div className="bg-[#0B0F1A] rounded-lg p-4 text-center">
+                            <p className="text-purple-400 text-2xl font-bold">{stats?.transfers || 0}</p>
+                            <p className="text-gray-400 text-sm">Transfers</p>
+                        </div>
+                        <div className="bg-[#0B0F1A] rounded-lg p-4 text-center">
+                            <p className="text-blue-400 text-2xl font-bold">{stats?.payments || 0}</p>
+                            <p className="text-gray-400 text-sm">Payments</p>
+                        </div>
+                        <div className="bg-[#0B0F1A] rounded-lg p-4 text-center">
+                            <p className="text-orange-400 text-2xl font-bold">{stats?.withdrawals || 0}</p>
+                            <p className="text-gray-400 text-sm">Withdrawals</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

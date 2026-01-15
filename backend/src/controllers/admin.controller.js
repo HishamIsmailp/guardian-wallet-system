@@ -9,20 +9,21 @@ exports.getDashboardStats = async (req, res) => {
         }
 
         const users = await prisma.user.findMany({});
+        const students = await prisma.student.findMany({});  // Students are separate entities now
         const wallets = await prisma.wallet.findMany({});
         const transactions = await prisma.transaction.findMany({});
-        const requests = await prisma.moneyRequest.findMany({});
         const vendors = await prisma.vendor.findMany({});
 
         // Get role IDs
         const guardianRole = await prisma.role.findFirst({ where: { name: 'GUARDIAN' } });
-        const studentRole = await prisma.role.findFirst({ where: { name: 'STUDENT' } });
 
         // Calculate stats
         const stats = {
             totalUsers: users.length,
             totalGuardians: users.filter(u => u.roleId === guardianRole?.id).length,
-            totalStudents: users.filter(u => u.roleId === studentRole?.id).length,
+            totalStudents: students.length,  // Count from students table
+            activeStudents: students.filter(s => s.status === 'ACTIVE').length,
+            blockedStudents: students.filter(s => s.status === 'BLOCKED').length,
             totalVendors: vendors.length,
             approvedVendors: vendors.filter(v => v.approved).length,
             pendingVendors: vendors.filter(v => !v.approved).length,
@@ -35,14 +36,14 @@ exports.getDashboardStats = async (req, res) => {
             pendingTransactions: transactions.filter(t => t.status === 'PENDING').length,
             totalVolume: transactions.filter(t => t.status === 'COMPLETED').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0),
 
-            totalRequests: requests.length,
-            pendingRequests: requests.filter(r => r.status === 'PENDING').length,
-            approvedRequests: requests.filter(r => r.status === 'APPROVED').length,
-            rejectedRequests: requests.filter(r => r.status === 'REJECTED').length,
+            // Transaction breakdown by type
+            deposits: transactions.filter(t => t.type === 'DEPOSIT').length,
+            transfers: transactions.filter(t => t.type === 'TRANSFER').length,
+            payments: transactions.filter(t => t.type === 'PAYMENT').length,
+            withdrawals: transactions.filter(t => t.type === 'WITHDRAWAL').length,
 
             // Recent activity
-            recentTransactions: transactions.slice(0, 10),
-            recentRequests: requests.slice(0, 10)
+            recentTransactions: transactions.slice(0, 10)
         };
 
         res.json(stats);

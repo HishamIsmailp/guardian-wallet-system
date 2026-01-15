@@ -29,11 +29,13 @@ const DashboardLayout = () => {
                 </div>
 
                 <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-                    <SidebarItem to="/dashboard" label="📊 Dashboard" active={location.pathname === '/dashboard'} />
-                    <SidebarItem to="/users" label="👥 User Management" active={location.pathname === '/users'} />
-                    <SidebarItem to="/transactions" label="💳 Transactions" active={location.pathname === '/transactions'} />
-                    <SidebarItem to="/vendors" label="🏪 Vendors" active={location.pathname === '/vendors'} />
-                    <SidebarItem to="/reports" label="📈 Reports" active={location.pathname === '/reports'} />
+                    <SidebarItem to="/dashboard" label="Dashboard" active={location.pathname === '/dashboard'} />
+                    <SidebarItem to="/users" label="Users (Guardians/Vendors)" active={location.pathname === '/users'} />
+                    <SidebarItem to="/students" label="Students" active={location.pathname === '/students'} />
+                    <SidebarItem to="/transactions" label="Transactions" active={location.pathname === '/transactions'} />
+                    <SidebarItem to="/vendors" label="Vendors" active={location.pathname === '/vendors'} />
+                    <SidebarItem to="/reports" label="Reports" active={location.pathname === '/reports'} />
+                    <SidebarItem to="/audit-logs" label="Audit Logs" active={location.pathname === '/audit-logs'} />
                 </nav>
 
                 <div className="p-4 border-t border-gray-800 flex-shrink-0">

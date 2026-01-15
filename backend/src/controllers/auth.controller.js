@@ -4,7 +4,19 @@ const { generateAccessToken, generateRefreshToken } = require('../config/jwt');
 
 exports.register = async (req, res) => {
     try {
-        const { email, password, name, roleName, storeName, guardianId } = req.body;
+        const { email, password, name, roleName, storeName } = req.body;
+
+        // STUDENT role is not allowed - students are managed separately by guardians
+        if (roleName === 'STUDENT') {
+            return res.status(400).json({
+                error: 'Students cannot register. Guardians create student accounts.'
+            });
+        }
+
+        // Only ADMIN, GUARDIAN, VENDOR can register
+        if (!['ADMIN', 'GUARDIAN', 'VENDOR'].includes(roleName)) {
+            return res.status(400).json({ error: 'Invalid role. Must be GUARDIAN or VENDOR.' });
+        }
 
         // Check if user exists
         const existing = await prisma.user.findUnique({ where: { email } });
@@ -24,16 +36,13 @@ exports.register = async (req, res) => {
                     passwordHash,
                     name,
                     roleId: role.id,
-                    guardianId: guardianId || null,
                     isVerified: false // Admin must approve
                 },
                 include: { role: true }
             });
 
-            // Create Wallet
-            let walletType = 'STUDENT';
-            if (roleName === 'GUARDIAN') walletType = 'GUARDIAN';
-            if (roleName === 'VENDOR') walletType = 'VENDOR';
+            // Create Wallet for Guardian or Vendor
+            const walletType = roleName === 'GUARDIAN' ? 'GUARDIAN' : 'VENDOR';
 
             await tx.wallet.create({
                 data: {

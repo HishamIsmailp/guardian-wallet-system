@@ -7,7 +7,9 @@ const { uuidParamValidation } = require('../middlewares/validation.middleware');
 
 router.use(authenticateToken);
 
-// Vendor operations
+// Vendor operations - Main transaction flow
+router.post('/transaction', transactionLimiter, vendorController.processTransaction);  // Process payment with student ID + PIN
+router.get('/transactions', vendorController.getVendorTransactions);                    // Vendor's transaction history
 router.post('/withdrawal', transactionLimiter, vendorController.requestWithdrawal);
 router.get('/qr-code', vendorController.generateQRCode);
 router.get('/approved', vendorController.getApprovedVendors);

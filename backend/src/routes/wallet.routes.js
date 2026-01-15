@@ -13,8 +13,7 @@ const {
 router.use(authenticateToken); // All routes require auth
 
 router.post('/add-money', transactionLimiter, addMoneyValidation, walletController.addMoney);
-router.post('/transfer', transactionLimiter, transferMoneyValidation, walletController.transferToStudent);
-router.post('/pay', transactionLimiter, payVendorValidation, walletController.payVendor);
+// NOTE: /transfer and /pay removed - Use /api/student/transfer and /api/vendor/transaction instead
 router.get('/balance', walletController.getBalance);
 router.get('/transactions', walletController.getTransactions);
 router.get('/transactions/all', walletController.getAllTransactions);
