@@ -1,35 +1,27 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-// Update LOCAL_IP with your computer's IP address
-// To find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)
-// Look for "IPv4 Address" under your active network adapter
-// 
-// Common scenarios:
-// - Physical device on same WiFi: Use your computer's local IP (e.g., 192.168.1.9)
-// - Android Emulator: Use '10.0.2.2' (special alias for host machine)
-// - iOS Simulator: Use 'localhost' or '127.0.0.1'
-// ============================================
-
-const LOCAL_IP = '192.168.220.12'; // <-- UPDATE THIS if your IP changes
-
-// Determine the correct API URL based on platform
+// Auto-detect the dev server IP from Expo so you never need to update manually
 const getBaseUrl = () => {
     if (Platform.OS === 'web') {
-        // Web browser uses localhost
         return 'http://localhost:3000/api';
-    } else if (Platform.OS === 'android') {
-        // For physical Android devices, use LOCAL_IP
-        // For Android Emulator, change LOCAL_IP to '10.0.2.2'
-        return `http://${LOCAL_IP}:3000/api`;
-    } else {
-        // iOS simulator can use localhost, physical iOS needs LOCAL_IP
-        return `http://${LOCAL_IP}:3000/api`;
     }
+
+    // Expo provides the dev server host (e.g. "192.168.1.9:8081")
+    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+    if (debuggerHost) {
+        const ip = debuggerHost.split(':')[0]; // strip the Expo port
+        return `http://${ip}:3000/api`;
+    }
+
+    // Fallback for Android emulator
+    if (Platform.OS === 'android') {
+        return 'http://10.0.2.2:3000/api';
+    }
+
+    return 'http://localhost:3000/api';
 };
 
 const BASE_URL = getBaseUrl();
