@@ -15,7 +15,7 @@ import { Platform } from 'react-native';
 // - iOS Simulator: Use 'localhost' or '127.0.0.1'
 // ============================================
 
-const LOCAL_IP = '192.168.1.9'; // <-- UPDATE THIS if your IP changes
+const LOCAL_IP = '192.168.1.165'; // <-- UPDATE THIS if your IP changes
 
 // Determine the correct API URL based on platform
 const getBaseUrl = () => {

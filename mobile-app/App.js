@@ -10,7 +10,6 @@ import { View, ActivityIndicator, Text, StyleSheet, TouchableOpacity } from 'rea
 import LoginScreen from './screens/LoginScreen';
 import ParentDashboard from './screens/ParentDashboard';
 import VendorDashboard from './screens/VendorDashboard';
-import StudentAuthScreen from './screens/StudentAuthScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -51,8 +50,7 @@ const AppNavigator = () => {
             {user.role?.name === 'GUARDIAN' && <Stack.Screen name="ParentDashboard" component={ParentDashboard} />}
             {user.role?.name === 'VENDOR' && <Stack.Screen name="VendorDashboard" component={VendorDashboard} />}
             {user.role?.name === 'ADMIN' && <Stack.Screen name="VendorDashboard" component={VendorDashboard} />}
-            {(user.role?.name === 'STUDENT' || user.isStudent) && <Stack.Screen name="StudentAuth" component={StudentAuthScreen} />}
-            {!['GUARDIAN', 'VENDOR', 'ADMIN', 'STUDENT'].includes(user.role?.name) && !user.isStudent && (
+            {!['GUARDIAN', 'VENDOR', 'ADMIN'].includes(user.role?.name) && (
               <Stack.Screen name="Unsupported">
                 {() => <UnsupportedRoleScreen role={user.role?.name} onLogout={logout} />}
               </Stack.Screen>

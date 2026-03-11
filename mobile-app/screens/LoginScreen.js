@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 export default function LoginScreen() {
-    const [mode, setMode] = useState('login'); // 'login', 'student', 'register'
+    const [mode, setMode] = useState('login'); // 'login', 'register'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [studentId, setStudentId] = useState('');
-    const [pin, setPin] = useState('');
 
     // Registration fields
     const [name, setName] = useState('');
@@ -17,7 +15,7 @@ export default function LoginScreen() {
     const [registerRole, setRegisterRole] = useState('GUARDIAN'); // 'GUARDIAN' or 'VENDOR'
     const [storeName, setStoreName] = useState('');
 
-    const { login, setUser } = useAuth();
+    const { login } = useAuth();
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -28,41 +26,6 @@ export default function LoginScreen() {
         const result = await login(email, password);
         if (!result.success) {
             Alert.alert('Login Failed', result.message);
-        }
-    };
-
-    const handleStudentLogin = async () => {
-        if (!studentId || !pin) {
-            Alert.alert('Error', 'Please enter Student ID and PIN');
-            return;
-        }
-
-        try {
-            const res = await api.post('/student/login', {
-                studentId: studentId.trim().toUpperCase(),
-                pin: pin.trim()
-            });
-
-            // Store token and user data
-            await AsyncStorage.setItem('token', res.data.accessToken);
-            await AsyncStorage.setItem('user', JSON.stringify({
-                id: res.data.student.id,
-                name: res.data.student.name,
-                studentId: res.data.student.studentId,
-                isStudent: true,
-                role: { name: 'STUDENT' }
-            }));
-
-            // Update auth context
-            setUser({
-                id: res.data.student.id,
-                name: res.data.student.name,
-                studentId: res.data.student.studentId,
-                isStudent: true,
-                role: { name: 'STUDENT' }
-            });
-        } catch (error) {
-            Alert.alert('Login Failed', error.response?.data?.error || 'Invalid Student ID or PIN');
         }
     };
 
@@ -139,14 +102,6 @@ export default function LoginScreen() {
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.modeOption, mode === 'student' && styles.modeOptionActive]}
-                    onPress={() => setMode('student')}
-                >
-                    <Text style={[styles.modeOptionText, mode === 'student' && styles.modeOptionTextActive]}>
-                        Student
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                     style={[styles.modeOption, mode === 'register' && styles.modeOptionActive]}
                     onPress={() => setMode('register')}
                 >
@@ -157,41 +112,7 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.form}>
-                {mode === 'student' ? (
-                    // Student login form
-                    <>
-                        <Text style={styles.label}>Student ID</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. STU001"
-                            placeholderTextColor="#666"
-                            value={studentId}
-                            onChangeText={setStudentId}
-                            autoCapitalize="characters"
-                        />
-
-                        <Text style={styles.label}>PIN</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="4-6 digit PIN"
-                            placeholderTextColor="#666"
-                            secureTextEntry
-                            keyboardType="numeric"
-                            maxLength={6}
-                            value={pin}
-                            onChangeText={setPin}
-                        />
-
-                        <TouchableOpacity style={styles.button} onPress={handleStudentLogin}>
-                            <Text style={styles.buttonText}>Login as Student</Text>
-                        </TouchableOpacity>
-
-                        <Text style={styles.hint}>
-                            Login to set up biometric payments.{'\n'}
-                            Use fingerprint instead of PIN at vendors.
-                        </Text>
-                    </>
-                ) : mode === 'register' ? (
+                {mode === 'register' ? (
                     // Registration form
                     <>
                         {/* Role selection */}

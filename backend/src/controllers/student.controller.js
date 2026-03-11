@@ -458,6 +458,41 @@ exports.getAllStudents = async (req, res) => {
     }
 };
 
+// Admin: Delete a student account
+exports.deleteStudent = async (req, res) => {
+    try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+
+        const { studentId } = req.params;
+
+        const student = await prisma.student.findUnique({ where: { id: studentId } });
+        if (!student) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        // Delete wallet and student in a transaction
+        await prisma.$transaction(async (tx) => {
+            // Delete wallet rules linked to student's wallet
+            const wallet = await tx.wallet.findFirst({ where: { studentId } });
+            if (wallet) {
+                await tx.walletRule.deleteMany({ where: { walletId: wallet.id } });
+                await tx.wallet.delete({ where: { id: wallet.id } });
+            }
+
+            await tx.student.delete({ where: { id: studentId } });
+        });
+
+        await createAuditLog('STUDENT_DELETED', req.user.id, 'STUDENT', studentId, { name: student.name, studentId: student.studentId }, req.ip);
+
+        res.json({ message: 'Student account removed successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to delete student' });
+    }
+};
+
 // ============ STUDENT BIOMETRIC/OTP ENDPOINTS ============
 
 // Student login (for mobile app - first time setup)

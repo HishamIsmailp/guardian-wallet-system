@@ -22,6 +22,7 @@ router.get('/:studentId/limit', studentController.getSpendingLimit);            
 
 // Admin operations
 router.get('/all', requireRole('ADMIN'), studentController.getAllStudents);
+router.delete('/:studentId', requireRole('ADMIN'), studentController.deleteStudent);
 
 // Student device/OTP operations (for biometric auth)
 router.post('/device/register', studentController.registerDevice);    // Register device for biometrics

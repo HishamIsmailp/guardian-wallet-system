@@ -16,6 +16,18 @@ const Students = () => {
         }
     };
 
+    const handleRemoveStudent = async (id, name) => {
+        if (!window.confirm(`Are you sure you want to remove student "${name}"? This action cannot be undone.`)) {
+            return;
+        }
+        try {
+            await api.delete(`/student/${id}`);
+            fetchStudents();
+        } catch (error) {
+            alert('Failed to remove student');
+        }
+    };
+
     useEffect(() => {
         fetchStudents();
     }, []);
@@ -40,12 +52,13 @@ const Students = () => {
                             <th className="px-6 py-4">Guardian</th>
                             <th className="px-6 py-4">Balance</th>
                             <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Action</th>
                         </tr>
                     </thead>
                     <tbody className="text-gray-300 divide-y divide-gray-800">
                         {students.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                                     No students yet. Guardians create students from their dashboard.
                                 </td>
                             </tr>
@@ -71,6 +84,14 @@ const Students = () => {
                                         }`}>
                                             {student.status}
                                         </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <button
+                                            onClick={() => handleRemoveStudent(student.id, student.name)}
+                                            className="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded transition"
+                                        >
+                                            Remove
+                                        </button>
                                     </td>
                                 </tr>
                             ))
