@@ -474,10 +474,11 @@ exports.deleteStudent = async (req, res) => {
 
         // Delete wallet and student in a transaction
         await prisma.$transaction(async (tx) => {
-            // Delete wallet rules linked to student's wallet
             const wallet = await tx.wallet.findFirst({ where: { studentId } });
             if (wallet) {
-                await tx.walletRule.deleteMany({ where: { walletId: wallet.id } });
+                // Nullify transaction references to this wallet
+                await tx.transaction.updateMany({ where: { fromWalletId: wallet.id }, data: { fromWalletId: null } });
+                await tx.transaction.updateMany({ where: { toWalletId: wallet.id }, data: { toWalletId: null } });
                 await tx.wallet.delete({ where: { id: wallet.id } });
             }
 

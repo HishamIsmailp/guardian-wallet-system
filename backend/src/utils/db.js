@@ -14,6 +14,7 @@ const initialData = {
     wallet_rules: [],
     vendors: [],
     menu_items: [],
+    transaction_items: [],
     task_checklists: [],
     audit_logs: []
     // money_requests removed - students don't interact with system
@@ -161,6 +162,62 @@ class Model {
         return Promise.resolve(updated);
     }
 
+    upsert({ where, update, create }) {
+        const existing = this.items.find(i => matchWhere(i, where));
+        if (existing) {
+            const idx = this.items.indexOf(existing);
+            const updated = { ...existing, ...update, updatedAt: new Date().toISOString() };
+            this.items[idx] = updated;
+            saveDb();
+            return Promise.resolve(updated);
+        } else {
+            return this.create({ data: create });
+        }
+    }
+
+    createMany({ data }) {
+        const created = data.map(item => {
+            const newItem = { ...item };
+            if (!newItem.id) newItem.id = crypto.randomUUID();
+            if (!newItem.createdAt) newItem.createdAt = new Date().toISOString();
+            if (!newItem.updatedAt) newItem.updatedAt = new Date().toISOString();
+            this.items.push(newItem);
+            return newItem;
+        });
+        saveDb();
+        return Promise.resolve({ count: created.length });
+    }
+
+    delete({ where }) {
+        const idx = this.items.findIndex(i => matchWhere(i, where));
+        if (idx === -1) throw new Error('Record not found');
+        const removed = this.items.splice(idx, 1)[0];
+        saveDb();
+        return Promise.resolve(removed);
+    }
+
+    deleteMany({ where }) {
+        const before = this.items.length;
+        dbData[this.key] = this.items.filter(i => !matchWhere(i, where));
+        saveDb();
+        return Promise.resolve({ count: before - dbData[this.key].length });
+    }
+
+    updateMany({ where, data }) {
+        let count = 0;
+        this.items.forEach((item, idx) => {
+            if (matchWhere(item, where)) {
+                for (const [key, val] of Object.entries(data)) {
+                    item[key] = val;
+                }
+                item.updatedAt = new Date().toISOString();
+                count++;
+            }
+        });
+        saveDb();
+        return Promise.resolve({ count });
+    }
+
     count() {
         return Promise.resolve(this.items.length);
     }
@@ -194,6 +251,7 @@ const prisma = {
     walletRule: new Model('wallet_rules'),
     vendor: new Model('vendors'),
     menuItem: new Model('menu_items'),
+    transactionItem: new Model('transaction_items'),
     auditLog: new Model('audit_logs'),
 
     $transaction: async (items) => {
