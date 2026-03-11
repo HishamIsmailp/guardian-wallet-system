@@ -1,5 +1,16 @@
-const Database = require('better-sqlite3');
-const db = new Database('dev.db');
+// load .env when running locally
+require('dotenv').config();
+
+const { Client } = require('pg');
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error('Error: DATABASE_URL environment variable not set');
+  process.exit(1);
+}
+
+const client = new Client({ connectionString });
 
 const schema = `
 -- Roles table (STUDENT role removed - students are separate entities)
@@ -7,8 +18,8 @@ CREATE TABLE IF NOT EXISTS roles (
   id TEXT PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
   description TEXT,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Users table (Admins, Guardians, Vendors only - NOT students)
@@ -19,9 +30,9 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT,
   roleId TEXT NOT NULL,
   phone TEXT,
-  isVerified BOOLEAN DEFAULT 0,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  isVerified BOOLEAN DEFAULT FALSE,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(roleId) REFERENCES roles(id)
 );
 
@@ -34,8 +45,8 @@ CREATE TABLE IF NOT EXISTS students (
   pinHash TEXT NOT NULL,
   guardianId TEXT NOT NULL,
   status TEXT DEFAULT 'ACTIVE',
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(guardianId) REFERENCES users(id)
 );
 
@@ -45,9 +56,9 @@ CREATE TABLE IF NOT EXISTS vendors (
   userId TEXT UNIQUE NOT NULL,
   storeName TEXT NOT NULL,
   description TEXT,
-  approved BOOLEAN DEFAULT 0,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  approved BOOLEAN DEFAULT FALSE,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(userId) REFERENCES users(id)
 );
 
@@ -59,8 +70,8 @@ CREATE TABLE IF NOT EXISTS wallets (
   currency TEXT DEFAULT 'INR',
   userId TEXT,
   studentId TEXT UNIQUE,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(userId) REFERENCES users(id),
   FOREIGN KEY(studentId) REFERENCES students(id)
 );
@@ -71,10 +82,10 @@ CREATE TABLE IF NOT EXISTS wallet_rules (
   walletId TEXT NOT NULL,
   dailyLimit REAL,
   allowedVendors TEXT,
-  active BOOLEAN DEFAULT 1,
+  active BOOLEAN DEFAULT TRUE,
   createdByUserId TEXT,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(walletId) REFERENCES wallets(id)
 );
 
@@ -88,8 +99,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   status TEXT DEFAULT 'PENDING',
   description TEXT,
   initiatedByUserId TEXT NOT NULL,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(fromWalletId) REFERENCES wallets(id),
   FOREIGN KEY(toWalletId) REFERENCES wallets(id),
   FOREIGN KEY(initiatedByUserId) REFERENCES users(id)
@@ -103,7 +114,7 @@ CREATE TABLE IF NOT EXISTS task_checklists (
   role TEXT,
   status TEXT DEFAULT 'PENDING',
   userId TEXT,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(userId) REFERENCES users(id)
 );
 
@@ -113,12 +124,23 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   action TEXT NOT NULL,
   userId TEXT,
   details TEXT,
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(userId) REFERENCES users(id)
 );
 `;
 
-db.exec(schema);
-console.log('Database initialized successfully.');
-console.log('Tables created: roles, users, students, vendors, wallets, wallet_rules, transactions, task_checklists, audit_logs');
-db.close();
+async function init() {
+  try {
+    await client.connect();
+    await client.query(schema);
+    console.log('Database initialized successfully.');
+    console.log('Tables created: roles, users, students, vendors, wallets, wallet_rules, transactions, task_checklists, audit_logs');
+  } catch (err) {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  } finally {
+    await client.end();
+  }
+}
+
+init();

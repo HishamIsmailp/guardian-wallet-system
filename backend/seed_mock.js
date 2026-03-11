@@ -180,99 +180,55 @@ async function main() {
         console.log('Created Vendor: cafeteria@test.com (password: password) - Store: Campus Cafeteria');
     }
 
-    // Create Task Checklists
-    const fs = require('fs');
-    const path = require('path');
-    const crypto = require('crypto');
-    const dbPath = path.resolve(__dirname, 'database.json');
-    let dbData;
-    try {
-        dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-    } catch (e) {
-        dbData = { task_checklists: [], audit_logs: [] };
-    }
-
-    if (!dbData.task_checklists || dbData.task_checklists.length === 0) {
+    // Create Task Checklists directly in Postgres using Prisma
+    const taskCount = await prisma.taskChecklist.count();
+    if (taskCount === 0) {
         const checklists = [
             {
-                id: crypto.randomUUID(),
                 title: 'Complete Profile Setup',
                 description: 'Add your personal information and verify your email',
                 role: 'GUARDIAN',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             },
             {
-                id: crypto.randomUUID(),
                 title: 'Add Initial Funds',
                 description: 'Load money into your guardian wallet',
                 role: 'GUARDIAN',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             },
             {
-                id: crypto.randomUUID(),
                 title: 'Create Student Account',
                 description: 'Add your student with their college ID and set a PIN',
                 role: 'GUARDIAN',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             },
             {
-                id: crypto.randomUUID(),
                 title: 'Set Spending Limits',
                 description: 'Configure daily spending limits for your student',
                 role: 'GUARDIAN',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             },
             {
-                id: crypto.randomUUID(),
                 title: 'Submit Business License',
                 description: 'Upload your business license for verification',
                 role: 'VENDOR',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             },
             {
-                id: crypto.randomUUID(),
                 title: 'Learn Transaction Process',
                 description: 'Understand how to process student payments using ID and PIN',
                 role: 'VENDOR',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             },
             {
-                id: crypto.randomUUID(),
                 title: 'Setup Bank Account',
                 description: 'Link your bank account for settlements',
                 role: 'VENDOR',
-                userId: null,
-                status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                status: 'PENDING'
             }
         ];
-
-        dbData.task_checklists = checklists;
+        await prisma.taskChecklist.createMany({ data: checklists });
         console.log('Created task checklists');
-    }
-
-    // Ensure students array exists in dbData
-    if (!dbData.students) {
-        dbData.students = [];
     }
 
     // Get fresh references
@@ -365,56 +321,53 @@ async function main() {
             console.log('Created sample transactions');
         }
 
-        // Add audit logs
-        if (adminFresh && (!dbData.audit_logs || dbData.audit_logs.length === 0)) {
-            dbData.audit_logs = [
-                {
-                    id: crypto.randomUUID(),
-                    action: 'USER_LOGIN',
-                    userId: adminFresh.id,
-                    details: 'Admin logged in',
-                    timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'USER_VERIFIED',
-                    userId: adminFresh.id,
-                    details: `Verified user: ${guardianFresh.email}`,
-                    timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'STUDENT_CREATED',
-                    userId: guardianFresh.id,
-                    details: `Created student: ${studentFresh.name} (${studentFresh.studentId})`,
-                    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'WALLET_RULE_CREATED',
-                    userId: guardianFresh.id,
-                    details: `Created spending limit for student: ₹200/day`,
-                    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'MONEY_TRANSFER',
-                    userId: guardianFresh.id,
-                    details: `Transferred ₹500 to ${studentFresh.name}`,
-                    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-                },
-                {
-                    id: crypto.randomUUID(),
-                    action: 'VENDOR_PAYMENT',
-                    userId: vendorFresh.id,
-                    details: `Received ₹150 from ${studentFresh.name}`,
-                    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-                }
-            ];
-            console.log('Created audit logs');
+        // Add audit logs to Postgres
+        if (adminFresh) {
+            const existingLogs = await prisma.auditLog.count();
+            if (existingLogs === 0) {
+                await prisma.auditLog.createMany({
+                    data: [
+                        {
+                            action: 'USER_LOGIN',
+                            userId: adminFresh.id,
+                            details: 'Admin logged in',
+                            timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
+                        },
+                        {
+                            action: 'USER_VERIFIED',
+                            userId: adminFresh.id,
+                            details: `Verified user: ${guardianFresh.email}`,
+                            timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
+                        },
+                        {
+                            action: 'STUDENT_CREATED',
+                            userId: guardianFresh.id,
+                            details: `Created student: ${studentFresh.name} (${studentFresh.studentId})`,
+                            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+                        },
+                        {
+                            action: 'WALLET_RULE_CREATED',
+                            userId: guardianFresh.id,
+                            details: `Created spending limit for student: ₹200/day`,
+                            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+                        },
+                        {
+                            action: 'MONEY_TRANSFER',
+                            userId: guardianFresh.id,
+                            details: `Transferred ₹500 to ${studentFresh.name}`,
+                            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+                        },
+                        {
+                            action: 'VENDOR_PAYMENT',
+                            userId: vendorFresh.id,
+                            details: `Received ₹150 from ${studentFresh.name}`,
+                            timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+                        }
+                    ]
+                });
+                console.log('Created audit logs');
+            }
         }
-
-        fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2));
     }
 
     console.log('\n✅ Database seeded successfully!');
