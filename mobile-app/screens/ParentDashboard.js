@@ -34,6 +34,8 @@ export default function ParentDashboard() {
     // QR Code modal (NEW)
     const [showQRModal, setShowQRModal] = useState(false);
 
+    const [actionLoading, setActionLoading] = useState(false);
+
     // Razorpay payment state
     const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
     const [addMoneyAmount, setAddMoneyAmount] = useState('');
@@ -145,7 +147,7 @@ export default function ParentDashboard() {
 
             Alert.alert(
                 'Payment Successful!',
-                `₹${response.data.amount} added to your wallet.\n\nNew Balance: ₹${response.data.newBalance.toFixed(2)}`,
+                `₹${response.data.amount} added to your wallet.\n\nNew Balance: ₹${parseFloat(response.data.newBalance).toFixed(2)}`,
                 [{ text: 'OK' }]
             );
             fetchData();
@@ -185,6 +187,7 @@ export default function ParentDashboard() {
             return;
         }
 
+        setActionLoading(true);
         try {
             await api.post('/student', {
                 name: newStudentName.trim(),
@@ -199,6 +202,8 @@ export default function ParentDashboard() {
             fetchData();
         } catch (error) {
             Alert.alert('Error', error.response?.data?.error || 'Failed to create student');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -212,6 +217,7 @@ export default function ParentDashboard() {
             return;
         }
 
+        setActionLoading(true);
         try {
             await api.post('/student/transfer', {
                 studentId: selectedStudent.id,
@@ -224,6 +230,8 @@ export default function ParentDashboard() {
             fetchData();
         } catch (error) {
             Alert.alert('Error', error.response?.data?.error || 'Transfer failed');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -251,6 +259,7 @@ export default function ParentDashboard() {
             return;
         }
 
+        setActionLoading(true);
         try {
             await api.put(`/student/${selectedStudent.id}/limit`, {
                 dailyLimit: parseFloat(dailyLimit)
@@ -267,6 +276,8 @@ export default function ParentDashboard() {
             fetchData();
         } catch (error) {
             Alert.alert('Error', error.response?.data?.error || 'Failed to set limit');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -325,7 +336,7 @@ export default function ParentDashboard() {
                     </View>
                     <View style={styles.spendingRow}>
                         <Text style={styles.spendingLabel}>Daily Limit:</Text>
-                        <Text style={styles.limitValue}>₹{item.dailyLimit.toFixed(2)}</Text>
+                        <Text style={styles.limitValue}>₹{Number(item.dailyLimit).toFixed(2)}</Text>
                     </View>
                     <View style={styles.progressBar}>
                         <View style={[styles.progressFill, {
@@ -466,8 +477,8 @@ export default function ParentDashboard() {
                             <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowCreateModal(false)}>
                                 <Text style={styles.modalCancelText}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleCreateStudent}>
-                                <Text style={styles.modalConfirmText}>Create</Text>
+                            <TouchableOpacity style={[styles.modalConfirmBtn, actionLoading && { opacity: 0.7 }]} onPress={handleCreateStudent} disabled={actionLoading}>
+                                {actionLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.modalConfirmText}>Create</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -489,14 +500,14 @@ export default function ParentDashboard() {
                             keyboardType="decimal-pad"
                         />
 
-                        <Text style={styles.availableText}>Available: ₹{balance.toFixed(2)}</Text>
+                        <Text style={styles.availableText}>Available: ₹{parseFloat(balance || 0).toFixed(2)}</Text>
 
                         <View style={styles.modalActions}>
                             <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowTransferModal(false)}>
                                 <Text style={styles.modalCancelText}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleTransfer}>
-                                <Text style={styles.modalConfirmText}>Transfer</Text>
+                            <TouchableOpacity style={[styles.modalConfirmBtn, actionLoading && { opacity: 0.7 }]} onPress={handleTransfer} disabled={actionLoading}>
+                                {actionLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.modalConfirmText}>Transfer</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -567,8 +578,8 @@ export default function ParentDashboard() {
                             <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowLimitModal(false)}>
                                 <Text style={styles.modalCancelText}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleSetLimit}>
-                                <Text style={styles.modalConfirmText}>Save</Text>
+                            <TouchableOpacity style={[styles.modalConfirmBtn, actionLoading && { opacity: 0.7 }]} onPress={handleSetLimit} disabled={actionLoading}>
+                                {actionLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.modalConfirmText}>Save</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>

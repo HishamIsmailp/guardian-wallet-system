@@ -181,7 +181,7 @@ export default function StudentAuthScreen() {
             {/* Balance Card */}
             <View style={styles.balanceCard}>
                 <Text style={styles.balanceLabel}>Available Balance</Text>
-                <Text style={styles.balanceValue}>₹{balance.toFixed(2)}</Text>
+                <Text style={styles.balanceValue}>₹{parseFloat(balance || 0).toFixed(2)}</Text>
             </View>
 
             {!isRegistered ? (

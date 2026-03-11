@@ -4,6 +4,7 @@ import api from '../api';
 const Users = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [actionId, setActionId] = useState(null);
 
     const fetchUsers = async () => {
         try {
@@ -19,11 +20,14 @@ const Users = () => {
     };
 
     const toggleVerify = async (id, currentStatus) => {
+        setActionId(id);
         try {
             await api.patch(`/auth/users/${id}/verify`, { isVerified: !currentStatus });
-            fetchUsers(); // Refresh
+            fetchUsers();
         } catch (error) {
             alert('Failed to update status');
+        } finally {
+            setActionId(null);
         }
     };
 
@@ -59,9 +63,10 @@ const Users = () => {
                             <td className="px-6 py-4">
                                 <button
                                     onClick={() => toggleVerify(user.id, user.isVerified)}
-                                    className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-white transition"
+                                    disabled={actionId === user.id}
+                                    className={`text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-white transition ${actionId === user.id ? 'opacity-50 cursor-wait' : ''}`}
                                 >
-                                    {user.isVerified ? 'Revoke' : 'Approve'}
+                                    {actionId === user.id ? 'Processing...' : (user.isVerified ? 'Revoke' : 'Approve')}
                                 </button>
                             </td>
                         </tr>

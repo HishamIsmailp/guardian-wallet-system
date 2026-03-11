@@ -4,6 +4,7 @@ import api from '../api';
 const Students = () => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [removing, setRemoving] = useState(null);
 
     const fetchStudents = async () => {
         try {
@@ -20,11 +21,14 @@ const Students = () => {
         if (!window.confirm(`Are you sure you want to remove student "${name}"? This action cannot be undone.`)) {
             return;
         }
+        setRemoving(id);
         try {
             await api.delete(`/student/${id}`);
             fetchStudents();
         } catch (error) {
             alert('Failed to remove student');
+        } finally {
+            setRemoving(null);
         }
     };
 
@@ -88,9 +92,10 @@ const Students = () => {
                                     <td className="px-6 py-4">
                                         <button
                                             onClick={() => handleRemoveStudent(student.id, student.name)}
-                                            className="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded transition"
+                                            disabled={removing === student.id}
+                                            className={`text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded transition ${removing === student.id ? 'opacity-50 cursor-wait' : ''}`}
                                         >
-                                            Remove
+                                            {removing === student.id ? 'Removing...' : 'Remove'}
                                         </button>
                                     </td>
                                 </tr>

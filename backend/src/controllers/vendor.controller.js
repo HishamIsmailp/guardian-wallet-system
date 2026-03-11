@@ -278,9 +278,17 @@ exports.approveVendor = async (req, res) => {
             return res.status(403).json({ error: 'Admin access required' });
         }
 
+        // Update both vendor.approved AND user.isVerified in one transaction
+        // This eliminates the need for double approval
         const vendor = await prisma.vendor.update({
             where: { id: vendorId },
-            data: { approved }
+            data: { approved },
+            include: { user: true }
+        });
+
+        await prisma.user.update({
+            where: { id: vendor.userId },
+            data: { isVerified: approved }
         });
 
         await createAuditLog('VENDOR_APPROVED', req.user.id, 'VENDOR', vendorId, { approved }, req.ip);

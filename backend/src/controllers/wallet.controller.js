@@ -62,7 +62,7 @@ exports.getBalance = async (req, res) => {
         console.log('getBalance: Balance type:', typeof wallet.balance);
         console.log('getBalance: Balance value:', wallet.balance);
 
-        res.json(wallet);
+        res.json({ ...wallet, balance: parseFloat(wallet.balance) });
     } catch (error) {
         console.error('getBalance error:', error);
         res.status(500).json({ error: 'Failed to fetch balance' });

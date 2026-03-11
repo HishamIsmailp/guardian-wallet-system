@@ -43,7 +43,7 @@ exports.getDashboardStats = async (req, res) => {
             withdrawals: transactions.filter(t => t.type === 'WITHDRAWAL').length,
 
             // Recent activity
-            recentTransactions: transactions.slice(0, 10)
+            recentTransactions: transactions.slice(0, 10).map(t => ({ ...t, amount: parseFloat(t.amount) }))
         };
 
         res.json(stats);

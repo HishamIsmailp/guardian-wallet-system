@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 
@@ -16,6 +16,7 @@ export default function LoginScreen() {
     const [storeName, setStoreName] = useState('');
 
     const { login } = useAuth();
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -23,9 +24,14 @@ export default function LoginScreen() {
             return;
         }
 
-        const result = await login(email, password);
-        if (!result.success) {
-            Alert.alert('Login Failed', result.message);
+        setLoading(true);
+        try {
+            const result = await login(email, password);
+            if (!result.success) {
+                Alert.alert('Login Failed', result.message);
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -62,6 +68,7 @@ export default function LoginScreen() {
                 payload.storeName = storeName;
             }
 
+            setLoading(true);
             const res = await api.post('/auth/register', payload);
 
             Alert.alert(
@@ -84,6 +91,8 @@ export default function LoginScreen() {
             );
         } catch (error) {
             Alert.alert('Registration Failed', error.response?.data?.error || 'Failed to create account');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -189,8 +198,8 @@ export default function LoginScreen() {
                             onChangeText={setConfirmPassword}
                         />
 
-                        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                            <Text style={styles.buttonText}>Create Account</Text>
+                        <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleRegister} disabled={loading}>
+                            {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>Create Account</Text>}
                         </TouchableOpacity>
 
                         <Text style={styles.hint}>
@@ -222,8 +231,8 @@ export default function LoginScreen() {
                             onChangeText={setPassword}
                         />
 
-                        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                            <Text style={styles.buttonText}>Sign In</Text>
+                        <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
+                            {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>Sign In</Text>}
                         </TouchableOpacity>
 
                         <Text style={styles.hint}>
@@ -331,6 +340,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         alignItems: 'center',
         marginTop: 10,
+    },
+    buttonDisabled: {
+        opacity: 0.7,
     },
     buttonText: {
         color: '#000',

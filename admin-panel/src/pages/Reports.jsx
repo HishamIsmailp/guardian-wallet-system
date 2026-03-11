@@ -121,7 +121,7 @@ const Reports = () => {
                                 </div>
                                 <div className="bg-[#0B0F1A] p-4 rounded-lg">
                                     <p className="text-gray-400 text-sm mb-1">Total Volume</p>
-                                    <p className="text-2xl font-bold text-[#2EF2C5]">₹{report.totalVolume.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold text-[#2EF2C5]">₹{parseFloat(report.totalVolume || 0).toFixed(2)}</p>
                                 </div>
                                 <div className="bg-[#0B0F1A] p-4 rounded-lg">
                                     <p className="text-gray-400 text-sm mb-1">Completed</p>

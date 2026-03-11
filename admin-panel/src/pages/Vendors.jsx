@@ -4,6 +4,7 @@ import api from '../api';
 const Vendors = () => {
     const [vendors, setVendors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [actionId, setActionId] = useState(null);
 
     useEffect(() => {
         fetchVendors();
@@ -22,12 +23,15 @@ const Vendors = () => {
     };
 
     const handleApprove = async (vendorId, approved) => {
+        setActionId(vendorId);
         try {
             await api.patch(`/vendor/${vendorId}/approve`, { approved });
-            fetchVendors(); // Refresh list
+            fetchVendors();
         } catch (err) {
             console.error('Failed to update vendor:', err);
             alert('Failed to update vendor status');
+        } finally {
+            setActionId(null);
         }
     };
 
@@ -104,15 +108,17 @@ const Vendors = () => {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(vendor.id, true)}
-                                            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                                            disabled={actionId === vendor.id}
+                                            className={`px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors ${actionId === vendor.id ? 'opacity-50 cursor-wait' : ''}`}
                                         >
-                                            ✓ Approve
+                                            {actionId === vendor.id ? 'Processing...' : '✓ Approve'}
                                         </button>
                                         <button
                                             onClick={() => handleApprove(vendor.id, false)}
-                                            className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                                            disabled={actionId === vendor.id}
+                                            className={`px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors ${actionId === vendor.id ? 'opacity-50 cursor-wait' : ''}`}
                                         >
-                                            ✗ Reject
+                                            {actionId === vendor.id ? 'Processing...' : '✗ Reject'}
                                         </button>
                                     </div>
                                 </div>
@@ -159,9 +165,10 @@ const Vendors = () => {
                                         <td className="py-4 px-6">
                                             <button
                                                 onClick={() => handleApprove(vendor.id, false)}
-                                                className="px-3 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition-colors"
+                                                disabled={actionId === vendor.id}
+                                                className={`px-3 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition-colors ${actionId === vendor.id ? 'opacity-50 cursor-wait' : ''}`}
                                             >
-                                                Revoke
+                                                {actionId === vendor.id ? 'Processing...' : 'Revoke'}
                                             </button>
                                         </td>
                                     </tr>

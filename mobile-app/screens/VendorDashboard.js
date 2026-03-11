@@ -190,17 +190,22 @@ export default function VendorDashboard() {
         }
     };
 
+    const [actionLoading, setActionLoading] = useState(false);
+
     const handleWithdraw = async () => {
-        if (balance <= 0) {
+        if (parseFloat(balance || 0) <= 0) {
             Alert.alert('Error', 'Insufficient balance');
             return;
         }
+        setActionLoading(true);
         try {
             await api.post('/vendor/withdrawal', { amount: balance });
             Alert.alert('Success', 'Withdrawal request sent to Admin');
             fetchData();
         } catch (error) {
             Alert.alert('Error', error.response?.data?.error || 'Withdrawal failed');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -525,8 +530,8 @@ export default function VendorDashboard() {
                         </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity style={styles.withdrawBtn} onPress={handleWithdraw}>
-                        <Text style={styles.withdrawText}>Request Settlement</Text>
+                    <TouchableOpacity style={[styles.withdrawBtn, actionLoading && { opacity: 0.7 }]} onPress={handleWithdraw} disabled={actionLoading}>
+                        {actionLoading ? <ActivityIndicator color="#2EF2C5" /> : <Text style={styles.withdrawText}>Request Settlement</Text>}
                     </TouchableOpacity>
                 </>
             )}
