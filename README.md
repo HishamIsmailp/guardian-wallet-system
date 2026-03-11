@@ -298,6 +298,28 @@ npm run db:seed
 npm run db:reset
 
 # View database (Prisma Studio)
+
+## Backend database setup (Postgres)
+
+The backend now uses PostgreSQL (Neon) instead of local SQLite. Follow these steps:
+
+1. Ensure `DATABASE_URL` is set in `backend/.env` (e.g. Neon connection string).
+2. `cd backend` and install dependencies (`npm install`).
+3. Push the Prisma schema to the database:
+   ```bash
+   npx prisma db push        # or `npm run db:push` (you can add this script)
+   ```
+4. Seed the database:
+   ```bash
+   npm run db:seed           # defined in backend/package.json
+   ```
+   or run the workspace-level script from root: `npm run db:seed`.
+
+Once seeded, you can open Prisma Studio:
+```bash
+npm run db:studio
+```
+
 npm run db:studio
 ```
 

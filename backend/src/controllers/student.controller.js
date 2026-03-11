@@ -356,6 +356,7 @@ exports.setSpendingLimit = async (req, res) => {
                 data: {
                     walletId: wallet.id,
                     dailyLimit: parseFloat(dailyLimit),
+                    allowedVendors: JSON.stringify([]), // Empty array as default
                     active: dailyLimit > 0,
                     createdByUserId: guardianId
                 }

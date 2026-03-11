@@ -1,80 +1,52 @@
 const prisma = require('./db');
 
 /**
- * Create an audit log entry
- * @param {string} action - Action performed (e.g., 'USER_LOGIN', 'MONEY_TRANSFER')
- * @param {string} userId - User who performed the action
- * @param {string} entityType - Type of entity affected (e.g., 'USER', 'WALLET', 'TRANSACTION')
- * @param {string} entityId - ID of the affected entity
- * @param {object} details - Additional details about the action
- * @param {string} ipAddress - IP address of the request
+ * Create an audit log entry using Prisma
+ * Flexible parameters for backward compatibility with old (entityType, entityId) calls
  */
-async function createAuditLog(action, userId, entityType, entityId, details = {}, ipAddress = null) {
+async function createAuditLog(action, userId, entityTypeOrDetails, entityIdOrDetails, detailsOrIpAddress, ipAddress) {
     try {
-        // Since we don't have an audit_logs model in db.js, we'll add it directly to the database
-        const fs = require('fs');
-        const path = require('path');
-        const dbPath = path.resolve(__dirname, '../../database.json');
+        // Parse parameters flexibly to support old and new signatures
+        let details = {};
+        if (typeof entityTypeOrDetails === 'object' && entityTypeOrDetails !== null) {
+            details = entityTypeOrDetails;
+        } else if (typeof detailsOrIpAddress === 'object' && detailsOrIpAddress !== null) {
+            details = detailsOrIpAddress;
+        }
 
-        const dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-
-        const auditLog = {
-            id: require('crypto').randomUUID(),
-            action,
-            userId,
-            entityType,
-            entityId,
-            details: JSON.stringify(details),
-            ipAddress,
-            createdAt: new Date().toISOString()
-        };
-
-        dbData.audit_logs.push(auditLog);
-        fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2));
-
-        return auditLog;
+        return await prisma.auditLog.create({
+            data: {
+                action,
+                userId: userId || null,
+                details: Object.keys(details).length > 0 ? JSON.stringify(details) : null,
+                // timestamp will be set by default
+            }
+        });
     } catch (error) {
         console.error('Failed to create audit log:', error);
-        // Don't throw - audit logging should not break the main flow
+        // don't propagate so that logging doesn't break flow
     }
 }
 
 /**
- * Get audit logs with filters
+ * Get audit logs with optional filters
  */
 async function getAuditLogs(filters = {}) {
     try {
-        const fs = require('fs');
-        const path = require('path');
-        const dbPath = path.resolve(__dirname, '../../database.json');
-
-        const dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        let logs = dbData.audit_logs || [];
-
-        // Apply filters
-        if (filters.userId) {
-            logs = logs.filter(log => log.userId === filters.userId);
-        }
-        if (filters.action) {
-            logs = logs.filter(log => log.action === filters.action);
-        }
-        if (filters.entityType) {
-            logs = logs.filter(log => log.entityType === filters.entityType);
-        }
-        if (filters.startDate) {
-            logs = logs.filter(log => new Date(log.createdAt) >= new Date(filters.startDate));
-        }
-        if (filters.endDate) {
-            logs = logs.filter(log => new Date(log.createdAt) <= new Date(filters.endDate));
+        const where = {};
+        if (filters.userId) where.userId = filters.userId;
+        if (filters.action) where.action = filters.action;
+        if (filters.startDate || filters.endDate) {
+            where.timestamp = {};
+            if (filters.startDate) where.timestamp.gte = new Date(filters.startDate);
+            if (filters.endDate) where.timestamp.lte = new Date(filters.endDate);
         }
 
-        // Sort by date descending
-        logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        // Limit results
-        if (filters.limit) {
-            logs = logs.slice(0, filters.limit);
-        }
+        const logs = await prisma.auditLog.findMany({
+            where,
+            orderBy: { timestamp: 'desc' },
+            take: filters.limit || undefined
+        });
 
         return logs;
     } catch (error) {
